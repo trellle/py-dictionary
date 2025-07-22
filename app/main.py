@@ -126,36 +126,3 @@ class Node:
         self.key = EMPTY
         self.hash = None
         self.value = EMPTY
-
-
-def dictionary_add(items: list):
-    dictionary = Dictionary()
-    for key, value in items:
-        dictionary[key] = value
-    values_to_add = [("one", 1),
-                ("one", 11),
-                ("one", 111),
-                ("one", 1111),
-                (145, 146),
-                (145, 145),
-                (145, -1),
-                ("two", 22),
-                ("two", 222),
-                ("two", 2222),
-                ("two", 22222),
-                (Point(1, 1), "A")]
-    for key, value in values_to_add:
-        dictionary[key] = value
-    for elem in dictionary:
-        print(elem, dictionary[elem])
-
-dictionary_add([
-                (8, "8"),
-                (16, "16"),
-                (32, "32"),
-                (64, "64"),
-                (128, "128"),
-                ("one", 2),
-                ("two", 2),
-                (Point(1, 1), "a"),
-            ])
