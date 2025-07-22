@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, Hashable
+from app.point import Point
 
 
 EMPTY = object()
@@ -15,17 +16,17 @@ class Dictionary:
         return round(self.capacity * 2 / 3)
 
     def extend_hash_table_capacity(self) -> None:
-        new_table = [Node() for _ in range(len(self.__hash_table) * 2)]
-        for elem in self.__hash_table:
+        old_table = self.__hash_table.copy()
+        self.__hash_table = [Node() for _ in range(self.capacity * 2)]
+        self.capacity = len(self.__hash_table)
+        for elem in old_table:
             if elem.hash:
-                index = self.get_index(elem.key)
-                while new_table[index].hash:
-                    index = (index + 1) % len(new_table)
-                new_table[index].key = elem.key
-                new_table[index].hash = elem.hash
-                new_table[index].value = elem.value
-        self.__hash_table = new_table
-        self.capacity = len(new_table)
+                index = hash(elem.key) % self.capacity
+                while self.__hash_table[index].hash:
+                    index = (index + 1) % self.capacity
+                self.__hash_table[index].key = elem.key
+                self.__hash_table[index].hash = elem.hash
+                self.__hash_table[index].value = elem.value
 
     def __setitem__(self, key: Hashable, value: Any) -> None:
         index = hash(key) % self.capacity
@@ -105,10 +106,10 @@ class Dictionary:
         except KeyError:
             return default
         else:
-            my_key = self.__hash_table[index].key
+            my_value = self.__hash_table[index].value
             self.clear_node(self.__hash_table[index])
             self.size -= 1
-            return my_key
+            return my_value
 
     def update(self, insert_dict: Dictionary) -> None:
         for elem in insert_dict:
@@ -125,3 +126,35 @@ class Node:
         self.key = EMPTY
         self.hash = None
         self.value = EMPTY
+
+def dictionary_add(items: list):
+    dictionary = Dictionary()
+    for key, value in items:
+        dictionary[key] = value
+    values_to_add = [("one", 1),
+                ("one", 11),
+                ("one", 111),
+                ("one", 1111),
+                (145, 146),
+                (145, 145),
+                (145, -1),
+                ("two", 22),
+                ("two", 222),
+                ("two", 2222),
+                ("two", 22222),
+                (Point(1, 1), "A")]
+    for key, value in values_to_add:
+        dictionary[key] = value
+    for elem in dictionary:
+        print(elem, dictionary[elem])
+
+dictionary_add([
+                (8, "8"),
+                (16, "16"),
+                (32, "32"),
+                (64, "64"),
+                (128, "128"),
+                ("one", 2),
+                ("two", 2),
+                (Point(1, 1), "a"),
+            ])
