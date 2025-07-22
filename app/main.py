@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Any, Hashable
-from app.point import Point
 
 
 EMPTY = object()
