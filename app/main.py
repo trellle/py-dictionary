@@ -1,73 +1,98 @@
 from __future__ import annotations
-from typing import Any
+from typing import Any, Hashable
+from app.point import Point
 
 
-max_cap = 8
-cap = round(max_cap * 2 / 3)
+EMPTY = object()
 
 
 class Dictionary:
-    def __init(self) -> None:
-        self.__hash_table = [Node() for _ in range(0, max_cap)]
+    def __init__(self) -> None:
+        self.capacity = 8
+        self.size = 0
+        self.__hash_table = [Node() for _ in range(0, self.capacity)]
+
+    def max_size(self) -> int:
+        return round(self.capacity * 2 / 3)
 
     def extend_hash_table_capacity(self) -> None:
-        for _ in range(0, len(self.__hash_table)):
-            self.__hash_table.append(Node())
+        new_table = [Node() for _ in range(len(self.__hash_table) * 2)]
+        for elem in self.__hash_table:
+            if elem.hash:
+                index = self.get_index(elem.key)
+                while new_table[index].hash:
+                    index = (index + 1) % len(new_table)
+                new_table[index].key = elem.key
+                new_table[index].hash = elem.hash
+                new_table[index].value = elem.value
+        self.__hash_table = new_table
+        self.capacity = len(new_table)
 
-    def __setitem__(self, key: Any, value: Any) -> None:
-        self.is_mutable(key)
+    def __setitem__(self, key: Hashable, value: Any) -> None:
+        index = hash(key) % self.capacity
+        if (self.__hash_table[index].hash == hash(key)
+                and self.__hash_table[index].key == key):
+            self.__hash_table[index].value = value
+            return
+        else:
+            index = self.search_for_index(index, key)
+            if index is not None:
+                self.__hash_table[index].value = value
+                return
         self.extend_size()
-        index = self.get_index(key)
-        while self.__hash_table[index] != Node():
+        index = hash(key) % self.capacity
+        while self.__hash_table[index].hash:
             index = (index + 1) % len(self.__hash_table)
         self.__hash_table[index].hash = hash(key)
         self.__hash_table[index].key = key
         self.__hash_table[index].value = value
+        self.size += 1
 
-    def __getitem__(self, key: Any) -> Any:
-        self.is_mutable(key)
+    def __getitem__(self, key: Hashable) -> Any:
         index = self.get_index(key)
-        self.is_node_empty(index)
-        if (self.__hash_table[index].hash == hash(key)
-                and self.__hash_table[index].key == key):
-            return self.__hash_table[index].value
+        return self.__hash_table[index].value
 
     def __len__(self) -> int:
-        return len(self.__hash_table) - self.__hash_table.count(Node())
+        return self.size
 
-    def is_mutable(self, key: Any) -> None:
-        if isinstance(key, (dict, list, set)):
-            raise KeyError
+    def get_index(self, key: Hashable) -> int:
+        index = hash(key) % self.capacity
+        if (self.__hash_table[index].hash != hash(key)
+                or self.__hash_table[index].key != key):
+            index = self.search_for_index(index, key)
+            if index is None:
+                raise KeyError
+        return index
 
-    def get_index(self, key: Any) -> int:
-        return hash(key) % len(self.__hash_table)
+    def search_for_index(self, index: int, key: Hashable) -> None | int:
+        new_index = (index + 1) % self.capacity
+        while new_index != index:
+            if (self.__hash_table[new_index].hash == hash(key)
+                    and self.__hash_table[new_index].key == key):
+                return new_index
+            new_index = (new_index + 1) % self.capacity
+        return None
 
     def extend_size(self) -> None:
-        if self.__hash_table.count(Node()) <= max_cap - cap:
+        if self.size == self.max_size():
             self.extend_hash_table_capacity()
-
-    def is_node_empty(self, index: int) -> None:
-        if self.__hash_table[index] == Node():
-            raise KeyError
 
     def clear(self) -> None:
         for elem in self.__hash_table:
             self.clear_node(elem)
+        self.size = 0
 
     def clear_node(self, node: Node) -> None:
         node.hash = None
-        node.key = None
-        node.value = None
+        node.key = EMPTY
+        node.value = EMPTY
 
-    def __delitem__(self, key: Any) -> None:
-        self.is_mutable(key)
+    def __delitem__(self, key: Hashable) -> None:
         index = self.get_index(key)
-        self.is_node_empty(index)
-        if (self.__hash_table[index].hash == hash(key)
-                and self.__hash_table[index].key == key):
-            self.clear_node(self.__hash_table[index])
+        self.clear_node(self.__hash_table[index])
+        self.size -= 1
 
-    def get(self, key: Any, default: Any = None) -> Any:
+    def get(self, key: Hashable, default: Any = None) -> Any:
         try:
             value = self.__getitem__(key)
         except KeyError:
@@ -75,17 +100,15 @@ class Dictionary:
         else:
             return value
 
-    def pop(self, key: Any, default: Any = None) -> Any:
+    def pop(self, key: Hashable, default: Any = None) -> Any:
         try:
-            self.is_mutable(key)
             index = self.get_index(key)
         except KeyError:
             return default
         else:
-            if (self.__hash_table[index].hash == hash(key)
-                    and self.__hash_table[index].key == key):
-                my_key = self.__hash_table[index].key
-            self.clear_node(index)
+            my_key = self.__hash_table[index].key
+            self.clear_node(self.__hash_table[index])
+            self.size -= 1
             return my_key
 
     def update(self, insert_dict: Dictionary) -> None:
@@ -93,16 +116,46 @@ class Dictionary:
             self.__setitem__(elem.key, elem.value)
 
     def __iter__(self) -> iter:
-        return DictIterator(self)
+        for element in self.__hash_table:
+            if element.key != EMPTY:
+                yield element.key
 
 
 class Node:
     def __init__(self) -> None:
-        self.key = None
+        self.key = EMPTY
         self.hash = None
-        self.value = None
+        self.value = EMPTY
 
 
-class DictIterator:
-    def __init__(self) -> None:
-        pass
+def dictionary_add(items: list):
+    dictionary = Dictionary()
+    for key, value in items:
+        dictionary[key] = value
+    values_to_add = [("one", 1),
+                ("one", 11),
+                ("one", 111),
+                ("one", 1111),
+                (145, 146),
+                (145, 145),
+                (145, -1),
+                ("two", 22),
+                ("two", 222),
+                ("two", 2222),
+                ("two", 22222),
+                (Point(1, 1), "A")]
+    for key, value in values_to_add:
+        dictionary[key] = value
+    for elem in dictionary:
+        print(elem, dictionary[elem])
+
+dictionary_add([
+                (8, "8"),
+                (16, "16"),
+                (32, "32"),
+                (64, "64"),
+                (128, "128"),
+                ("one", 2),
+                ("two", 2),
+                (Point(1, 1), "a"),
+            ])
